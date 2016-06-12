@@ -34,26 +34,8 @@ public class MainClass {
 		// }
 		// stmt.executeBatch();
 		
-		Scanner scan = new Scanner(System.in);
-		try (ObjectInputStream ois = new ObjectInputStream(
-				new BufferedInputStream(new FileInputStream("file/stock.txt")))) {
-
-			ArrayList<Stock> readData = (ArrayList<Stock>) ois.readObject();
-			if (!readData.isEmpty()) {
-				System.out.print("Do you want to recovery ? Y | N > ");
-				String confirm = scan.next().toLowerCase();
-				if (confirm.equals("y")) {
-					Manipulation.tempData = readData;
-					new Manipulation().saveToData(confirm);
-				} else {
-					File file = new File("file/stock.txt");
-					file.delete();
-				}
-			}
-
-		} catch (FileNotFoundException e) {
-
-		}
+		
+		Manipulation.smartSave("recovery");
 		new Display().getAllProducts();
 		Display.showMenu();
 		Scanner input;

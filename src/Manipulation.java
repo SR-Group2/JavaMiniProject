@@ -1,7 +1,11 @@
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -13,13 +17,87 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Scanner;
 
-public class Manipulation {
+public class Manipulation extends Thread{
 	static Connection con;
 	static ArrayList<Stock> tempData = new ArrayList<Stock>();
 	static int limit = 5;
 	static int id;
 	Scanner scan = new Scanner(System.in);
 	ResultSet rs;
+	
+	public int checkInt(String str){
+		 Scanner sc = new Scanner(System.in);
+		 int number;
+		    do {
+		        System.out.print(str);
+		        while (!sc.hasNextInt()) {
+		            System.out.println("That's not a number!");
+		            System.out.print(str);
+		            sc.next(); // this is important!
+		        }
+		        number = sc.nextInt();
+		    } while (number <= 0);
+		   return number;
+	}
+	
+	public double checkDouble(String str){
+		 Scanner sc = new Scanner(System.in);
+		    double number;
+		    do {
+		        System.out.print(str);
+		        while (!sc.hasNextDouble()) {
+		            System.out.println("That's not a number!");
+		            System.out.print(str);
+		            sc.next(); // this is important!
+		        }
+		        number = sc.nextDouble();
+		    } while (number <= 0);
+		   return number;
+	}
+	
+	public String checkString(String info){
+		String str;
+		boolean b = true, isString = false;
+		while (b) {
+			System.out.print(info);
+			scan = new Scanner(System.in);
+			str = scan.next();
+			isString = str.matches("\\d+");
+			if (isString == true) {
+				System.out.println("Please input only string value!");
+				b = true;
+			}
+			else{
+				b = false;
+				return str;
+			}
+		}
+		
+		return "";
+	}
+	
+	public static void smartSave(String info) throws IOException, ClassNotFoundException, SQLException{
+		Scanner scan = new Scanner(System.in);
+		try (ObjectInputStream ois = new ObjectInputStream(
+				new BufferedInputStream(new FileInputStream("file/stock.txt")))) {
+
+			ArrayList<Stock> readData = (ArrayList<Stock>) ois.readObject();
+			if (!readData.isEmpty()) {
+				System.out.print("Do you want to " + info + "  ? Y | N > ");
+				String confirm = scan.next().toLowerCase();
+				if (confirm.equals("y")) {
+					Manipulation.tempData = readData;
+					new Manipulation().saveToData(confirm);
+				} else {
+					File file = new File("file/stock.txt");
+					file.delete();
+				}
+			}
+
+		} catch (FileNotFoundException e) {
+
+		}
+	}
 	
 	public Manipulation() throws ClassNotFoundException, SQLException {
 		con = ConnectionManager.getConnection();
@@ -28,16 +106,38 @@ public class Manipulation {
 	
 	public int backup() throws SQLException{
 		
-		SimpleDateFormat sdfDate = new SimpleDateFormat("dd_MM_yyyy_h:mm:ss");
-		Date now = new Date();
-		String strDate = sdfDate.format(now);
-		String sql = "SELECT * INTO "+ strDate+" FROM tblproduct";
-		PreparedStatement stmt =  con.prepareStatement(sql);
-		int result = stmt.executeUpdate();
-		return result;
-	}
-	public void restore(){
+//		SimpleDateFormat sdfDate = new SimpleDateFormat("dd_MM_yyyy_h:mm:ss");
+//		Date now = new Date();
+//		String strDate = sdfDate.format(now);
 		
+//		int results = stmtd.executeUpdate();
+//		PreparedStatement stmt =  con.prepareStatement("SELECT * INTO temp FROM tblproduct");
+//		int result = 0;
+//		result = stmt.executeUpdate();
+//		return result;
+		
+		dropTable("DROP TABLE temp");
+		cloneTable("SELECT * INTO temp FROM tblproduct");
+		
+		return 1;
+		
+	}
+	
+	public void dropTable(String sql) throws SQLException{
+
+		PreparedStatement stmtd =  con.prepareStatement(sql);
+		stmtd.executeUpdate();
+	}
+	
+	public void cloneTable(String sql) throws SQLException{
+
+		PreparedStatement stmtd =  con.prepareStatement(sql);
+		stmtd.executeUpdate();
+	}
+	public int restore() throws SQLException{
+		dropTable("DROP TABLE tblproduct");
+		cloneTable("SELECT * INTO tblproduct FROM temp");
+		return 1;
 	}
 	public static ResultSet getAllProducts(int remain) throws SQLException{
 		ResultSet rs;
@@ -83,17 +183,18 @@ public class Manipulation {
 		// Checking product id
 		if (id > getLastID()) {
 			++id;
-			System.out.println("Product ID: " + id);
+			//System.out.println("Product ID: " + id);
 		} else {
 			id = getLastID() + 1;
-			System.out.println("Product ID: " + id);
+			//System.out.println("Product ID: " + id);
 		}
-		System.out.print("Input Product Name > ");
-		String name = scan.next();
-		System.out.print("Input Price > ");
-		double price = scan.nextDouble();
-		System.out.print("Input Product Quantity > ");
-		int qty = scan.nextInt();
+//		System.out.print("Input Product Name > ");
+//		String name = scan.next();
+		String name = this.checkString("Input Product Name > " );
+		//System.out.print("Input Price > ");
+		double price = this.checkDouble("Input Price > ");
+		//System.out.print("Input Product Quantity > ");
+		int qty = this.checkInt("Input Product Quantity > ");
 		tempData.add(new Stock(id, name, price, qty, strDate));
 		
 		ObjectOutputStream oos = new ObjectOutputStream(
@@ -108,12 +209,13 @@ public class Manipulation {
 		
 		if (confirm.equals("y")) {
 			PreparedStatement stmt = con
-					.prepareStatement("INSERT INTO tblproduct(p_name,p_unitprice,p_qty,p_date) VALUES(?,?,?,?)");
+					.prepareStatement("INSERT INTO tblproduct(p_id,p_name,p_unitprice,p_qty,p_date) VALUES(?,?,?,?,?)");
 			for(Stock product : Manipulation.tempData){
-				stmt.setString(1, product.getPname());
-				stmt.setDouble(2, product.getpUnitPrice());
-				stmt.setInt(3, product.getpQty());
-				stmt.setString(4, product.getpDate());
+				stmt.setInt(1, product.getID());
+				stmt.setString(2, product.getPname());
+				stmt.setDouble(3, product.getpUnitPrice());
+				stmt.setInt(4, product.getpQty());
+				stmt.setString(5, product.getpDate());
 				stmt.addBatch();
 			}
 			stmt.executeBatch();

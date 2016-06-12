@@ -23,11 +23,11 @@ import org.nocrala.tools.texttablefmt.Table;
 public class Display {
 	static Manipulation mp;
 	Pagination pg;
-	ResultSet rs;
+	ResultSet rs = null;
 	static int perPage = 1;
 	static int rmPage = 0;
-	Scanner scan = new Scanner(System.in);
-	
+	static Scanner scan = new Scanner(System.in);
+
 	Table t = new Table(5, BorderStyle.UNICODE_BOX_DOUBLE_BORDER, ShownBorders.ALL);
 
 	public Display() throws ClassNotFoundException, SQLException {
@@ -38,7 +38,7 @@ public class Display {
 	// Cannot static data type
 	public void getAllProducts() throws SQLException, ClassNotFoundException, IOException {
 		Display.perPage = 1;
-		
+
 		CellStyle numberStyle = new CellStyle(HorizontalAlign.center);
 		t.setColumnWidth(0, 15, 30);
 		t.setColumnWidth(1, 15, 30);
@@ -195,15 +195,25 @@ public class Display {
 
 	// Deleting data
 	public void doDelete() throws SQLException, ClassNotFoundException, IOException {
-		System.out.print("Input Product ID > ");
+		//System.out.print("Input Product ID > ");
 		Scanner scan = new Scanner(System.in);
-		int delete = scan.nextInt();
+		//int delete = scan.nextInt();
+		int delete = mp.checkInt("Input Product ID > ");
+		int checkID = 0;
+		rs = mp.searchID(delete);
+		while(rs.next()){
+			checkID = rs.getInt("p_id");
+		}
+		if(checkID != 0){
 		System.out.print("Do you really want to delete? Y | N ");
 		String confirm = scan.next().toLowerCase();
 		if (confirm.equals("y")) {
 			if (mp.delete(delete)) {
 				System.out.println("Deleted Successfully!");
 			}
+		}
+		}else{
+			System.out.println("Your Product ID not found!");
 		}
 
 		new Display().getAllProducts();
@@ -214,83 +224,137 @@ public class Display {
 
 		ArrayList<Stock> arr = new ArrayList<Stock>();
 		int id;
-		System.out.print("Input Product ID > ");
-		id = scan.nextInt();
-		rs = mp.searchID(id);
-		while (rs.next()) {
+		int checkId = 0;
+		boolean check = true, b = true;
+		// System.out.print("Input Product ID > ");
+		id = mp.checkInt("Input Product ID > ");
+
+		ResultSet rs = mp.searchID(id);
+		
+		while(rs.next()){
+			checkId = rs.getInt("p_id");
 			arr.add(new Stock(rs.getInt("p_id"), rs.getString("p_name"), rs.getDouble("p_unitprice"),
 					rs.getInt("p_qty"), rs.getString("p_date")));
+			for(Stock str : arr){
+				System.out.println(str.getPname() + str.getID() + str.getpQty());
+			}
 		}
-		System.out.println("How many fields do you want to update");
-		System.out.println();
-		System.out.println("A/ All" + "\t" + "B/ Product Name" + "\t" + "C/ Unit Price" + "\t" + "D/ Qauntiy" + "\t" + "E/ Exit");
-		System.out.println();
 		
-		// ====== store value ==============
-		String choose, pname;
-		double pprice;
-		int qty;
+		if(checkId !=0 ){
 
-		System.out.print("Choose Your Options > ");
-		choose = scan.next().toLowerCase();
-		if (choose.equals("a")) {
-			System.out.print("Product Name > ");
-			pname = scan.next();
-			System.out.print("Product Price > ");
-			pprice = scan.nextDouble();
-			System.out.print("Quantity > ");
-			qty = scan.nextInt();
-			for(Stock update : arr){
-				update.setPname(pname);
-				update.setpUnitPrice(pprice);
-				update.setpQty(qty);
+//			while (rs.next()) {
+//				
+//				arr.add(new Stock(rs.getInt("p_id"), rs.getString("p_name"), rs.getDouble("p_unitprice"),
+//						rs.getInt("p_qty"), rs.getString("p_date")));
+//			}
+			
+			
+			System.out.println("How many fields do you want to update?");
+			System.out.println();
+			System.out.println(
+					"A/ All" + "\t" + "B/ Product Name" + "\t" + "C/ Unit Price" + "\t" + "D/ Qauntiy" + "\t" + "E/ Exit");
+			System.out.println();
+			
+
+			// ====== store value ==============
+			String choose, pname;
+			double pprice;
+			int qty;
+
+			System.out.print("Choose Your Options > ");
+			while (b) {
+				choose = scan.next().toLowerCase();
+				if (choose.equals("a")) {
+					System.out.print("Product Name > ");
+					pname = scan.next();
+					System.out.print("Product Price > ");
+					pprice = scan.nextDouble();
+					System.out.print("Quantity > ");
+					qty = scan.nextInt();
+					for (Stock update : arr) {
+						update.setPname(pname);
+						update.setpUnitPrice(pprice);
+						update.setpQty(qty);
+					}
+
+					b = false;
+
+				} else if (choose.equals("b")) {
+					System.out.print("Product Name > ");
+					pname = scan.next();
+					for (Stock update : arr) {
+						update.setPname(pname);
+					}
+					b = false;
+				} else if (choose.equals("c")) {
+					System.out.print("Product Price > ");
+					pprice = scan.nextDouble();
+					for (Stock update : arr) {
+						update.setpUnitPrice(pprice);
+					}
+					b = false;
+				} else if (choose.equals("d")) {
+					System.out.print("Quantity > ");
+					qty = scan.nextInt();
+					for (Stock update : arr) {
+						update.setpQty(qty);
+					}
+					b = false;
+				} else if (choose.equals("e")) {
+					new Display().getAllProducts();
+					b = false;
+					return;
+				} else {
+					check = false;
+					System.out.println("Incorrect Syntax!");
+					System.out.println("Please try again!");
+					System.out.print("Choose Your Options > ");
+					b = true;
+				}
+
 			}
 			
-		} else if (choose.equals("b")) {
-			System.out.print("Product Name > ");
-			pname = scan.next();
-			for(Stock update : arr){
-				update.setPname(pname);
+			if (check == true) {
+				System.out.print("Do you really want to update? Y | N ");
+				String confirm = scan.next().toLowerCase();
+				if (confirm.equals("y")) {
+					if (mp.update(arr)) {
+						System.out.println("Updated Successfully!");
+					}
+				}
 			}
-			
-		} else if(choose.equals("c")){
-			System.out.print("Product Price > ");
-			pprice = scan.nextDouble();
-			for(Stock update : arr){
-				update.setpUnitPrice(pprice);
-			}
-		} else if(choose.equals("d")){
-			System.out.print("Quantity > ");
-			qty = scan.nextInt();
-			for(Stock update : arr){
-				update.setpQty(qty);
-			}
-		}else if(choose.equals("e")){
-			new Display().getAllProducts();
-			return ;
+
 		}else{
-			System.out.println("Incorrect Syntax!");
+			System.out.println("Your Product ID Not Fould!");
 		}
 		
-		System.out.print("Do you really want to delete? Y | N ");
-		String confirm = scan.next().toLowerCase();
-		if (confirm.equals("y")) {
-			if (mp.update(arr)) {
-				System.out.println("Updated Successfully!");
-			}
-		}
+		
+		
 		new Display().getAllProducts();
 	}
-	
-	public void doBackUp() throws SQLException{
-		System.out.print("Do you really want to delete? Y | N ");
+
+	public void doBackUp() throws SQLException {
+		System.out.print("Do you really want to backup? Y | N ");
 		String confirm = scan.next().toLowerCase();
 		if (confirm.equals("y")) {
+			System.out.println(mp.backup());
 			if (mp.backup() > 0) {
-				System.out.println("Updated Successfully!");
+				System.out.println("Backup Successfully!");
+				
 			}
 		}
 	}
+	
+	public void doRestore() throws SQLException {
+		System.out.print("Do you really want to restore? Y | N ");
+		String confirm = scan.next().toLowerCase();
+		if (confirm.equals("y")) {
+			if (mp.restore() > 0) {
+				System.out.println("Restored Successfully!");
+			}
+		}
+	}
+
 	public void getGoToPage() throws SQLException {
 
 		int goPage = scan.nextInt();
@@ -387,7 +451,10 @@ public class Display {
 			Display.showMenu();
 			break;
 		case "d":
+			
 			new Display().doDelete();
+	
+			
 			Display.showMenu();
 			break;
 		case "f":
@@ -396,7 +463,7 @@ public class Display {
 			Display.showMenu();
 			break;
 		case "n":
-			if (Pagination.offset >= mp.getNumRows() - Manipulation.limit) {
+			if (Pagination.offset > mp.getNumRows() - Manipulation.limit) {
 				Pagination.offset = 0;
 				Display.perPage = 1;
 			} else {
@@ -415,9 +482,6 @@ public class Display {
 				System.out.println(Pagination.offset);
 				Display.perPage -= 1;
 				Pagination.offset = Pagination.offset - Manipulation.limit;
-			} else if (Pagination.offset == 0) {
-				Pagination.offset = mp.getNumRows() - Manipulation.limit;
-				Display.perPage = mp.getNumRows() / Manipulation.limit;
 			}
 
 			new Display().getNextPage();
@@ -453,13 +517,17 @@ public class Display {
 			Display.showMenu();
 			break;
 		case "re":
-			System.out.println("restore");
+			new Display().doRestore();
+			new Display().getAllProducts();
+			Display.showMenu();
 			break;
 		case "h":
-			System.out.println("help");
+			System.out.println("This section is updating ");
+			System.out.println("Thank You for your interesting ! ");
+			new Display().getAllProducts();
+			Display.showMenu();
 			break;
 		case "sa":
-			Scanner scan = new Scanner(System.in);
 			System.out.print("Do you want to save? y | n ? > ");
 			String confirm = scan.next();
 			mp.saveToData(confirm);
@@ -467,11 +535,21 @@ public class Display {
 			Display.showMenu();
 			break;
 		case "e":
-			System.out.println("Thank for your using my app....");
-			System.exit(0);
+			System.out.print("Do you really to exit? Y | N > ");
+			String con = scan.next().toLowerCase();
+			if (con.equals("y")) {
+				System.out.println("Thank for your using my app....");
+				System.exit(0);
+			} else {
+
+				Display.selectMenu("*");
+			}
+
 			break;
 		default:
 			System.out.println("Incorrect Syntax!");
+			System.out.println("Please check option available on menu box !");
+			System.out.print("options > ");
 		}
 	}
 }
